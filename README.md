@@ -1,12 +1,12 @@
 # Task 3 — JWT Authentication: Vampire Token
 
-A Node.js, Express, and MongoDB authentication API for the AVIP Backend Development training. It implements registration, login, hashed passwords, JWT authentication, protected routes, and simple role-based access.
+A Node.js, Express, and SQLite authentication API for the AVIP Backend Development training. It implements registration, login, hashed passwords, JWT authentication, protected routes, and simple role-based access.
 
 ## The vampire-token twist
 
 Each login creates a unique JWT with **10 protected requests**. Every successful request to a protected route removes one use. Request number 10 still succeeds and revokes the token. Request number 11 returns `401`, so the user must log in again.
 
-The usage count is stored in MongoDB, not memory. This makes it work correctly across server restarts and Vercel serverless functions.
+The usage count is stored in SQLite, not memory. This makes it work correctly across local server restarts.
 
 ## Features
 
@@ -25,7 +25,7 @@ The usage count is stored in MongoDB, not memory. This makes it work correctly a
 ```text
 api/index.js                 Vercel function entry point
 public/index.html            browser test page
-src/config/db.js             MongoDB connection
+src/config/sqlite.js         SQLite connection and schema creation
 src/controllers/             HTTP request handling
 src/middleware/              JWT and role guards
 src/models/                  User and token-usage schemas
@@ -47,9 +47,9 @@ src/services/                authentication business logic
 
    ```env
    PORT=3002
-   DB_URI=mongodb+srv://<username>:<password>@<cluster-url>/Arithmetic_Task_3?retryWrites=true&w=majority
    JWT_SECRET=a_long_random_secret_at_least_32_characters
    JWT_EXPIRES_IN=1h
+   SQLITE_DB_PATH=./data/auth.db
    ```
 
    Generate a secure secret with:
@@ -114,18 +114,17 @@ Each successful protected request includes an `X-Token-Uses-Remaining` response 
 
 ## Roles
 
-Registration always creates a `user` account. The API deliberately ignores a submitted `role` field so nobody can register themselves as an admin. To demonstrate the admin endpoint, change a test user's `role` to `admin` in MongoDB Atlas/Compass, then log in again to receive a token containing that role.
+Registration always creates a `user` account. The API deliberately ignores a submitted `role` field so nobody can register themselves as an admin. To demonstrate the admin endpoint, open `data/auth.db` in a SQLite viewer, change a test user's `role` to `admin`, then log in again to receive a token containing that role.
 
 ## Deploy on Vercel
 
 1. Push this folder to a public GitHub repository.
 2. Import that repository into Vercel.
-3. Add `DB_URI`, `JWT_SECRET`, and `JWT_EXPIRES_IN` in **Settings → Environment Variables**.
+3. Add `JWT_SECRET` and `JWT_EXPIRES_IN` in **Settings → Environment Variables**.
 4. Deploy. Do not add your `.env` file to GitHub.
 
-For MongoDB Atlas, add Vercel access in **Network Access**. For a class demo you can use `0.0.0.0/0`; for a real production project restrict access as much as possible.
+SQLite is ideal for local development and this assignment. Vercel functions use temporary files, so they cannot keep a SQLite database permanently after redeploys or cold starts. If you deploy publicly and need permanent data, use a hosted SQLite-compatible service such as Turso, or keep the earlier MongoDB version for Vercel.
 
 ## Suggested repository name
 
 `BD_3_JWTAuthentication_byte`
-

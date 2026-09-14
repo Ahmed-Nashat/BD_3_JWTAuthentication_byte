@@ -6,6 +6,13 @@ import { User } from "../models/user.model.js";
 
 const TOKEN_LIMIT = 10;
 
+const durationToMilliseconds = (duration) => {
+  const match = /^(\d+)\s*([smhd])$/.exec(duration);
+  if (!match) return 60 * 60 * 1000;
+  const value = Number(match[1]);
+  return value * ({ s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[match[2]]);
+};
+
 const createError = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -20,7 +27,7 @@ const getJwtSecret = () => {
 };
 
 const toPublicUser = (user) => ({
-  id: user._id.toString(),
+  id: user.id,
   name: user.name,
   email: user.email,
   role: user.role,
@@ -28,7 +35,7 @@ const toPublicUser = (user) => ({
 
 export const registerUser = async ({ name, email, password }) => {
   const normalizedEmail = email.trim().toLowerCase();
-  const exists = await User.exists({ email: normalizedEmail });
+  const exists = await User.findByEmail(normalizedEmail);
 
   if (exists) {
     throw createError("An account with this email already exists", 409);
@@ -47,7 +54,7 @@ export const registerUser = async ({ name, email, password }) => {
 
 export const loginUser = async ({ email, password }) => {
   const normalizedEmail = email.trim().toLowerCase();
-  const user = await User.findOne({ email: normalizedEmail }).select("+passwordHash");
+  const user = await User.findByEmail(normalizedEmail);
 
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     throw createError("Invalid email or password", 401);
@@ -55,16 +62,16 @@ export const loginUser = async ({ email, password }) => {
 
   const jti = crypto.randomUUID();
   const expiresIn = process.env.JWT_EXPIRES_IN || "1h";
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+  const expiresAt = Date.now() + durationToMilliseconds(expiresIn);
   const token = jwt.sign(
-    { sub: user._id.toString(), role: user.role, jti },
+    { sub: String(user.id), role: user.role, jti },
     getJwtSecret(),
     { expiresIn },
   );
 
   await TokenUsage.create({
     jti,
-    userId: user._id,
+    userId: user.id,
     remainingUses: TOKEN_LIMIT,
     expiresAt,
   });
@@ -84,4 +91,3 @@ export const getUserById = async (userId) => {
   }
   return toPublicUser(user);
 };
-

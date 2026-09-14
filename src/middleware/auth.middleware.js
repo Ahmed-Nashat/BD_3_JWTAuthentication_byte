@@ -15,24 +15,15 @@ export const authenticate = async (req, res, next) => {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const tokenUsage = await TokenUsage.findOne({
-      jti: payload.jti,
-      userId: payload.sub,
-    });
+    const tokenUsage = await TokenUsage.consume(payload.jti, payload.sub);
 
     if (!tokenUsage) {
-      return unauthorized(res, "This token is not recognized");
+      const storedToken = await TokenUsage.findByToken(payload.jti, payload.sub);
+      if (storedToken?.revokedAt || storedToken?.remainingUses <= 0) {
+        return unauthorized(res, "This token was revoked after 10 protected requests");
+      }
+      return unauthorized(res, "This token is not recognized or has expired");
     }
-
-    if (tokenUsage.revokedAt || tokenUsage.remainingUses <= 0) {
-      return unauthorized(res, "This token was revoked after 10 protected requests");
-    }
-
-    tokenUsage.remainingUses -= 1;
-    if (tokenUsage.remainingUses === 0) {
-      tokenUsage.revokedAt = new Date();
-    }
-    await tokenUsage.save();
 
     req.auth = {
       userId: payload.sub,
@@ -62,4 +53,3 @@ export const authorizeRoles = (...allowedRoles) => (req, res, next) => {
   }
   return next();
 };
-

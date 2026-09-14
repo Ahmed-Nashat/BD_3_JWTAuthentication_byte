@@ -1,11 +1,11 @@
 import "dotenv/config";
 import app from "./app.js";
-import { connectDB } from "./config/db.js";
+import { initializeDatabase } from "./config/sqlite.js";
 
 const port = process.env.PORT || 3002;
 
 try {
-  await connectDB();
+  initializeDatabase();
   app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
 } catch (error) {
   console.error("Unable to start server:", error.message);

@@ -1,11 +1,7 @@
 import app from "../src/app.js";
-import { connectDB } from "../src/config/db.js";
-
-let connectionPromise;
+import { initializeDatabase } from "../src/config/sqlite.js";
 
 export default async function handler(req, res) {
-  connectionPromise ??= connectDB();
-  await connectionPromise;
+  initializeDatabase();
   return app(req, res);
 }
-

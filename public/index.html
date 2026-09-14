@@ -52,9 +52,27 @@
       let token = "";
       const result = document.querySelector("#result");
       const show = (data) => (result.textContent = JSON.stringify(data, null, 2));
-      const send = async (url, body) => {
-        const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-        return response.json();
+      const request = async (url, options = {}) => {
+        show({ success: true, msg: "Sending request..." });
+        try {
+          const response = await fetch(url, options);
+          const data = await response.json();
+          data.status = response.status;
+          data.tokenUsesRemaining = response.headers.get("X-Token-Uses-Remaining");
+          return data;
+        } catch (error) {
+          return {
+            success: false,
+            msg: "The API could not be reached. Start the server with npm run dev, or open the deployed Vercel URL instead of opening this HTML file directly.",
+          };
+        }
+      };
+      const send = (url, body) =>
+        request(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
       };
       document.querySelector("#register-form").addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -68,10 +86,7 @@
       });
       const protectedRequest = async (url) => {
         if (!token) return show({ success: false, msg: "Log in first" });
-        const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await response.json();
-        data.tokenUsesRemaining = response.headers.get("X-Token-Uses-Remaining");
-        show(data);
+        show(await request(url, { headers: { Authorization: `Bearer ${token}` } }));
       };
       document.querySelector("#profile").addEventListener("click", () => protectedRequest("/api/auth/profile"));
       document.querySelector("#admin").addEventListener("click", () => protectedRequest("/api/auth/admin"));

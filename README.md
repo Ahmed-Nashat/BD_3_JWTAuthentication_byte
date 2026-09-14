@@ -17,13 +17,12 @@ The usage count is stored in SQLite, not memory. This makes it work correctly ac
 - Admin-only endpoint using `user` and `admin` roles
 - Token revocation after 10 protected requests
 - Request validation and clear HTTP error responses
-- Basic browser test page at `/`
-- Ready for Vercel deployment
+- Browser test page at `/`
+- Local SQLite database file at `data/auth.db`
 
 ## Project structure
 
 ```text
-api/index.js                 Vercel function entry point
 public/index.html            browser test page
 src/config/sqlite.js         SQLite connection and schema creation
 src/controllers/             HTTP request handling
@@ -64,7 +63,17 @@ src/services/                authentication business logic
    npm run dev
    ```
 
-Open `http://localhost:3002` for the test page.
+Open `http://localhost:3002` for the test page. Do not open `public/index.html` directly or through Live Server, because the page needs the Express API running on port `3002`.
+
+## Browser test flow
+
+1. Fill in **Register** and click **Create account**. The result panel shows `Account created`.
+2. Enter the same email and password under **Login**, then click **Log in and receive token**. The result panel shows `Login successful` and a token with `tokenLimit: 10`.
+3. Click **Call profile**. The response shows the profile and `remainingUses: 9`.
+4. Keep clicking **Call profile**. The counter reaches `0` on the tenth protected request.
+5. The eleventh protected request returns `401`, which means the token was revoked correctly. Log in again to receive a new token.
+
+If the browser still uses an older page after pulling a Git update, press `Ctrl + F5` to hard refresh it.
 
 ## Endpoints
 
@@ -116,14 +125,9 @@ Each successful protected request includes an `X-Token-Uses-Remaining` response 
 
 Registration always creates a `user` account. The API deliberately ignores a submitted `role` field so nobody can register themselves as an admin. To demonstrate the admin endpoint, open `data/auth.db` in a SQLite viewer, change a test user's `role` to `admin`, then log in again to receive a token containing that role.
 
-## Deploy on Vercel
+## Local-only database
 
-1. Push this folder to a public GitHub repository.
-2. Import that repository into Vercel.
-3. Add `JWT_SECRET` and `JWT_EXPIRES_IN` in **Settings → Environment Variables**.
-4. Deploy. Do not add your `.env` file to GitHub.
-
-SQLite is ideal for local development and this assignment. Vercel functions use temporary files, so they cannot keep a SQLite database permanently after redeploys or cold starts. If you deploy publicly and need permanent data, use a hosted SQLite-compatible service such as Turso, or keep the earlier MongoDB version for Vercel.
+This assignment is intended to run locally. SQLite stores the data in `data/auth.db`, and `.env` and the database file are ignored by Git so your local data and secret remain private. No MongoDB, Atlas, Vercel, or deployment setup is required.
 
 ## Suggested repository name
 

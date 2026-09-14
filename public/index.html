@@ -73,7 +73,6 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
-      };
       document.querySelector("#register-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         show(await send("/api/auth/register", Object.fromEntries(new FormData(event.target))));
